@@ -567,8 +567,8 @@ CalculationHistory
 
 ```bash
 java -version
-mvn -version
-mvn clean verify
+./mvnw -version
+./mvnw clean verify
 ```
 
 验证：
@@ -710,7 +710,7 @@ target/
 8. 历史容量有上限，超限淘汰最旧记录；
 9. 并发写入不产生重复 ID 或集合异常；
 10. 所有自动化测试通过；
-11. `mvn clean verify` 通过；
+11. `./mvnw clean verify` 通过；
 12. runnable JAR 能够通过 `java -jar` 独立启动；
 13. HTTP 冒烟测试通过；
 14. 系统没有数据库、缓存组件和外部接口调用；

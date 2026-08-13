@@ -164,7 +164,7 @@ primary        := NUMBER
 | 弧度制 | `sin(pi / 2)`，`RADIAN` | `1` |
 | 角度制 | `sin(90)`，`DEGREE` | `1` |
 | 绝对值与常用对数 | `abs(-3) + log(100)` | `5` |
-| 空白输入 | `"   "` | `400 INVALID_EXPRESSION` |
+| 空白输入 | `"   "` | `400 INVALID_ARGUMENT` |
 | 不完整表达式 | `1 +` | `400 EXPRESSION_SYNTAX_ERROR` |
 | 非法字符 | `1; system()` | `400 EXPRESSION_SYNTAX_ERROR` |
 | 未知标识符/函数 | `foo(1)`、`x + 1` | `400 EXPRESSION_SYNTAX_ERROR` |
@@ -213,8 +213,8 @@ MockMvc 至少验证：
 
 ```bash
 java -version
-mvn -version
-mvn clean verify
+./mvnw -version
+./mvnw clean verify
 ```
 
 通过标准：
@@ -254,7 +254,7 @@ curl -i -X DELETE http://localhost:8080/api/v1/calculations
 
 交付时保留以下可复核证据：
 
-- `mvn clean verify` 的完整结果摘要和 Surefire 测试报告；
+- `./mvnw clean verify` 的完整结果摘要和 Surefire 测试报告；
 - runnable JAR 文件名、大小和 SHA-256；
 - 独立启动日志中的端口与启动成功信息；
 - 上述 HTTP 冒烟请求的状态码和响应体；
