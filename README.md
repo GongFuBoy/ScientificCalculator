@@ -4,6 +4,8 @@ Java 17 + Spring Boot 3.3.13 实现的纯内存科学计算器 HTTP 后端。无
 
 完整项目文档入口：[docs/README.md](docs/README.md)
 
+完整项目github地址：https://github.com/GongFuBoy/ScientificCalculator
+
 ## 构建与启动
 
 ```bash
