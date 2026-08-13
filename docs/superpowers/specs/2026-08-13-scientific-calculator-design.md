@@ -32,7 +32,7 @@
 
 `angleUnit` 可取 `RADIAN` 或 `DEGREE`，省略时默认为 `RADIAN`。
 
-成功返回 `201 Created`：
+成功返回 `200 OK`：
 
 ```json
 {
@@ -48,7 +48,7 @@
 
 - `GET /api/v1/calculations?limit=20`：按创建时间倒序返回，`limit` 范围为 1～100；
 - `GET /api/v1/calculations/{id}`：按 ID 查询单条记录；
-- `DELETE /api/v1/calculations`：清空全部内存历史，返回 `204 No Content`。
+- `DELETE /api/v1/calculations`：清空全部内存历史，返回 `200 OK` 和 `{"cleared":true}`。
 
 ### 2.3 健康检查
 
@@ -104,7 +104,7 @@ primary        := NUMBER
 
 历史记录使用同步保护的有界双端队列和单调递增 ID：
 
-- 默认最多保留 1000 条；
+- 固定最多保留 1000 条；
 - 新记录位于队首，超限时删除最旧记录；
 - 查询返回不可变快照；
 - 清空记录不重置 ID，避免同一进程生命周期内 ID 重用；
@@ -197,13 +197,13 @@ MockMvc 至少验证：
 
 | 场景 | 关键断言 |
 |---|---|
-| 成功计算 | `201`、`Content-Type: application/json`、返回 ID/表达式/角度单位/结果/时间，随后可从历史查到 |
+| 成功计算 | `200`、`Content-Type: application/json`、返回 ID/表达式/角度单位/结果/时间，随后可从历史查到 |
 | 省略角度单位 | 使用 `RADIAN` 默认值 |
 | 非法枚举或空表达式 | `400`，错误体包含稳定的 `code/message/path/timestamp` |
 | 计算领域错误 | `422`，不暴露异常类名或堆栈 |
 | 历史列表 | `200`、倒序、`limit` 生效 |
 | 单条历史 | 存在时 `200`，不存在时 `404` |
-| 清空历史 | `204`，响应体为空，后续列表为空 |
+| 清空历史 | `200`、返回 `{"cleared":true}`，后续列表为空 |
 | 健康检查 | `200` 与 `{"status":"UP"}` |
 | 非法 JSON/错误 Content-Type | 返回 JSON 格式的 `400`/`415`，不返回默认 HTML 错误页 |
 
@@ -248,7 +248,7 @@ curl -i -X POST http://localhost:8080/api/v1/calculations \
 curl -i -X DELETE http://localhost:8080/api/v1/calculations
 ```
 
-通过标准：健康检查为 `200`；成功计算为 `201` 且结果为 `5.0`；历史查询包含该记录；除零为 `422` 且错误体符合契约；清空为 `204`。进程启动期间不要求数据库、缓存、环境变量密钥或网络连接。
+通过标准：健康检查、成功计算和清空历史均为 `200`；计算结果为 `5.0`；历史查询包含该记录；除零为 `422` 且错误体符合契约；清空响应为 `{"cleared":true}`。进程启动期间不要求数据库、缓存、环境变量密钥或网络连接。
 
 ### 7.6 验收证据与退出标准
 
