@@ -34,8 +34,8 @@
 - `src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java` — MockMvc HTTP 契约测试。
 - `src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java` — 真实上下文的 POST/列表集成测试。
 - `README.md` — 构建、启动、API、语法和已知限制说明。
-- `docs/AI_DELIVERY.md` — 实际 AI 提示/输出、人工检查、修正和证据。
-- `docs/TEST_EVIDENCE.md` — 最终命令输出、测试摘要、JAR 校验和及 curl 证据。
+- `docs/README.md` — 实际 AI 提示/输出、人工检查、修正和证据。
+- `docs/testing/TEST_EVIDENCE.md` — 最终命令输出、测试摘要、JAR 校验和及 curl 证据。
 
 ## 任务 1：初始化 Maven 应用
 
@@ -403,17 +403,17 @@ git commit -m "feat: expose calculator and history HTTP APIs"
 
 **文件：**
 - 创建：`README.md`
-- 创建：`docs/AI_DELIVERY.md`
-- 创建：`docs/TEST_EVIDENCE.md`
+- 创建：`docs/README.md`
+- 创建：`docs/testing/TEST_EVIDENCE.md`
 - 修改：`src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java`，通过真实 Spring 上下文调用 `CalculatorService` 并断言保存了一次计算。
 
 - [x] **步骤 1：根据已冻结需求补充文档**
 
 `README.md` 必须说明 Java 17 前置条件、`./mvnw clean verify`、`java -jar`、所有接口、请求/响应示例、语法、函数白名单、角度单位、错误码、仅内存且重启丢失的行为，以及固定 1000 条容量。
 
-`docs/AI_DELIVERY.md` 必须包含表格，记录本次会话实际使用的提示词、AI 输出摘要、个人验证、个人修正，以及需求、设计、编码、测试和打包阶段的证据路径/命令。
+`docs/README.md` 必须包含表格，记录本次会话实际使用的提示词、AI 输出摘要、个人验证、个人修正，以及需求、设计、编码、测试和打包阶段的证据路径/命令。
 
-`docs/TEST_EVIDENCE.md` 必须记录真实 Java/Maven 版本、测试摘要、JAR 路径、SHA-256、启动输出，以及执行验证命令后的 curl 响应；命令执行前不得虚构结果。
+`docs/testing/TEST_EVIDENCE.md` 必须记录真实 Java/Maven 版本、测试摘要、JAR 路径、SHA-256、启动输出，以及执行验证命令后的 curl 响应；命令执行前不得虚构结果。
 
 - [x] **步骤 2：将上下文测试升级为真实应用集成测试**
 
@@ -447,12 +447,12 @@ curl -i -X DELETE http://localhost:8080/api/v1/calculations
 
 - [x] **步骤 5：记录证据和校验和**
 
-运行 `shasum -a 256 target/scientific-calculator-*.jar`，将真实输出、测试摘要和 HTTP 响应复制到 `docs/TEST_EVIDENCE.md`。检查命令输出前不得宣称结果。
+运行 `shasum -a 256 target/scientific-calculator-*.jar`，将真实输出、测试摘要和 HTTP 响应复制到 `docs/testing/TEST_EVIDENCE.md`。检查命令输出前不得宣称结果。
 
 - [x] **步骤 6：提交文档和证据**
 
 ```bash
-git add README.md docs/AI_DELIVERY.md docs/TEST_EVIDENCE.md src/test
+git add README.md docs/README.md docs/testing/TEST_EVIDENCE.md src/test
 git commit -m "docs: add delivery and verification evidence"
 ```
 

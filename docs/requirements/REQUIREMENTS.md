@@ -650,12 +650,16 @@ src/main/java/...
 src/test/java/...
 README.md
 docs/
-├── REQUIREMENTS.md
-├── AI_DELIVERY.md
-├── TEST_EVIDENCE.md
-└── superpowers/
-    ├── specs/
-    └── plans/
+├── README.md
+├── requirements/
+│   └── REQUIREMENTS.md
+├── design/
+│   └── scientific-calculator-design.md
+├── plans/
+│   └── scientific-calculator-implementation.md
+└── testing/
+    ├── CURL_TEST_CASES.md
+    └── TEST_EVIDENCE.md
 target/
 └── scientific-calculator-*.jar
 ```
@@ -671,7 +675,7 @@ target/
 - 错误码；
 - 已知限制。
 
-### 14.2 AI_DELIVERY.md
+### 14.2 docs/README.md
 
 按阶段记录 AI 辅助和候选人校验：
 
@@ -685,7 +689,7 @@ target/
 
 不得虚构“个人手写了哪些代码行”。以实际决策、校验方法、修改记录和运行证据区分 AI 产出与个人贡献。
 
-### 14.3 TEST_EVIDENCE.md
+### 14.3 docs/testing/TEST_EVIDENCE.md
 
 记录：
 

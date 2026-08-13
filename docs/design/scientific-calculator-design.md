@@ -265,7 +265,7 @@ curl -i -X DELETE http://localhost:8080/api/v1/calculations
 
 ## 8. AI 全链路交付证据
 
-`docs/AI_DELIVERY.md` 按需求、设计、编码、测试、打包五个阶段记录：
+`docs/README.md` 按需求、设计、编码、测试、打包五个阶段记录：
 
 - AI 辅助的提示与产出摘要；
 - 候选人的校验方法；
