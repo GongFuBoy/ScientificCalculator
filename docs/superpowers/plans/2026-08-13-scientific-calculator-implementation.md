@@ -1,54 +1,54 @@
-# Scientific Calculator Implementation Plan
+# 科学计算器实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **致执行代理：** 必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 子技能，按任务逐项实施本计划。步骤使用复选框（`- [ ]`）跟踪。
 
-**Goal:** Build and verify a Java 17/Spring Boot 3 HTTP scientific calculator with safe expression evaluation and a bounded in-memory calculation history.
+**目标：** 构建并验证一个 Java 17/Spring Boot 3 HTTP 科学计算器，提供安全的表达式求值和有界的内存计算历史。
 
-**Architecture:** A small Spring Boot monolith exposes calculation, history, clear-history, and health endpoints. `CalculatorService` coordinates a pure-Java whitelist recursive-descent evaluator and a thread-safe bounded history store; a global exception handler maps stable domain errors to JSON responses. No database, cache, script engine, reflection, or external service is used.
+**架构：** 使用小型 Spring Boot 单体应用，暴露计算、历史、清空历史和健康检查接口。`CalculatorService` 协调纯 Java 白名单递归下降求值器与线程安全的有界历史存储；全局异常处理器将稳定的领域错误映射为 JSON 响应。不使用数据库、缓存、脚本引擎、反射或外部服务。
 
-**Tech Stack:** Java 17, Spring Boot 3.3.13, Maven, JUnit 5, Spring MVC MockMvc, standard JDK concurrency/math APIs.
+**技术栈：** Java 17、Spring Boot 3.3.13、Maven、JUnit 5、Spring MVC MockMvc、JDK 标准并发/数学 API。
 
 ---
 
-## File map
+## 文件清单
 
-Create only the files needed for the first runnable version:
+第一版只创建运行所需的文件：
 
-- `pom.xml` — Spring Boot 3.3.13 parent, Java 17 compiler settings, web/test dependencies, executable-JAR plugin.
-- `.mvn/wrapper/maven-wrapper.properties`, `mvnw`, `mvnw.cmd` — Maven 3.9.9 wrapper for reproducible builds.
-- `src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java` — Spring Boot entry point and explicit beans added after their types exist.
-- `src/main/java/com/example/scientificcalculator/calculation/AngleUnit.java` — fixed `RADIAN`/`DEGREE` enum.
-- `src/main/java/com/example/scientificcalculator/calculation/CalculationRecord.java` — immutable history/result record.
-- `src/main/java/com/example/scientificcalculator/calculation/CalculationRequest.java` — HTTP request DTO with string angle-unit input for stable validation errors.
-- `src/main/java/com/example/scientificcalculator/calculation/CalculationController.java` — calculation/history/clear endpoints.
-- `src/main/java/com/example/scientificcalculator/calculation/CalculatorService.java` — calculate, store, list, find, clear orchestration.
-- `src/main/java/com/example/scientificcalculator/calculation/HistoryNotFoundException.java` — explicit `404 HISTORY_NOT_FOUND` signal.
-- `src/main/java/com/example/scientificcalculator/calculation/CalculationHistory.java` — bounded thread-safe in-memory store with capacity 1000.
-- `src/main/java/com/example/scientificcalculator/expression/ExpressionException.java` — typed evaluator errors and stable error codes.
-- `src/main/java/com/example/scientificcalculator/expression/ExpressionEvaluator.java` — tokenizer, recursive-descent parser, function whitelist, finite/domain checks.
-- `src/main/java/com/example/scientificcalculator/api/ApiExceptionHandler.java` — JSON error mapping for application and Spring MVC errors.
-- `src/main/java/com/example/scientificcalculator/api/HealthController.java` — `GET /health`.
-- `src/test/java/com/example/scientificcalculator/expression/ExpressionEvaluatorTest.java` — parser/evaluator behavior and limits.
-- `src/test/java/com/example/scientificcalculator/calculation/CalculationHistoryTest.java` — history ordering, capacity, snapshot, and concurrency.
-- `src/test/java/com/example/scientificcalculator/calculation/CalculatorServiceTest.java` — evaluate-before-store and failure atomicity.
-- `src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java` — MockMvc HTTP contract tests.
-- `src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java` — real-context POST/list integration test.
-- `README.md` — build/start/API/grammar/known-limit documentation.
-- `docs/AI_DELIVERY.md` — actual AI prompts/outputs, personal checks, corrections, and evidence.
-- `docs/TEST_EVIDENCE.md` — final command outputs, test summary, JAR checksum, and curl evidence.
+- `pom.xml` — Spring Boot 3.3.13 父 POM、Java 17 编译设置、Web/测试依赖和可执行 JAR 插件。
+- `.mvn/wrapper/maven-wrapper.properties`、`mvnw`、`mvnw.cmd` — 固定 Maven 3.9.9 的 Wrapper，保证构建可复现。
+- `src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java` — Spring Boot 启动类，并在类型创建后显式声明 Bean。
+- `src/main/java/com/example/scientificcalculator/calculation/AngleUnit.java` — 固定的 `RADIAN`/`DEGREE` 枚举。
+- `src/main/java/com/example/scientificcalculator/calculation/CalculationRecord.java` — 不可变历史/结果记录。
+- `src/main/java/com/example/scientificcalculator/calculation/CalculationRequest.java` — HTTP 请求 DTO，角度单位先接收字符串以便返回稳定校验错误。
+- `src/main/java/com/example/scientificcalculator/calculation/CalculationController.java` — 计算、历史和清空接口。
+- `src/main/java/com/example/scientificcalculator/calculation/CalculatorService.java` — 计算、保存、列表、查询和清空编排。
+- `src/main/java/com/example/scientificcalculator/calculation/HistoryNotFoundException.java` — 明确表示 `404 HISTORY_NOT_FOUND` 的异常。
+- `src/main/java/com/example/scientificcalculator/calculation/CalculationHistory.java` — 容量 1000 的有界线程安全内存存储。
+- `src/main/java/com/example/scientificcalculator/expression/ExpressionException.java` — 求值器异常及稳定错误码。
+- `src/main/java/com/example/scientificcalculator/expression/ExpressionEvaluator.java` — 词法分析、递归下降解析、函数白名单及有限值/定义域检查。
+- `src/main/java/com/example/scientificcalculator/api/ApiExceptionHandler.java` — 应用异常和 Spring MVC 异常的 JSON 映射。
+- `src/main/java/com/example/scientificcalculator/api/HealthController.java` — `GET /health`。
+- `src/test/java/com/example/scientificcalculator/expression/ExpressionEvaluatorTest.java` — 解析器/求值器行为与限制测试。
+- `src/test/java/com/example/scientificcalculator/calculation/CalculationHistoryTest.java` — 历史顺序、容量、快照和并发测试。
+- `src/test/java/com/example/scientificcalculator/calculation/CalculatorServiceTest.java` — 先计算后保存及失败原子性测试。
+- `src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java` — MockMvc HTTP 契约测试。
+- `src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java` — 真实上下文的 POST/列表集成测试。
+- `README.md` — 构建、启动、API、语法和已知限制说明。
+- `docs/AI_DELIVERY.md` — 实际 AI 提示/输出、人工检查、修正和证据。
+- `docs/TEST_EVIDENCE.md` — 最终命令输出、测试摘要、JAR 校验和及 curl 证据。
 
-## Task 1: Bootstrap the Maven application
+## 任务 1：初始化 Maven 应用
 
-**Files:**
-- Create: `pom.xml`
-- Create: `.mvn/wrapper/maven-wrapper.properties`
-- Create: `mvnw`
-- Create: `mvnw.cmd`
-- Create: `src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java`
-- Create: `src/main/java/com/example/scientificcalculator/api/HealthController.java`
-- Test: `src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java`
+**文件：**
+- 创建：`pom.xml`
+- 创建：`.mvn/wrapper/maven-wrapper.properties`
+- 创建：`mvnw`
+- 创建：`mvnw.cmd`
+- 创建：`src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java`
+- 创建：`src/main/java/com/example/scientificcalculator/api/HealthController.java`
+- 测试：`src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java`
 
-- [ ] **Step 1: Write the failing context test**
+- [ ] **步骤 1：编写失败的上下文测试**
 
 ```java
 @SpringBootTest
@@ -59,15 +59,15 @@ class ScientificCalculatorApplicationTest {
 }
 ```
 
-- [ ] **Step 2: Run the test and confirm the expected missing-project failure**
+- [ ] **步骤 2：运行测试并确认预期的项目缺失失败**
 
-Run: `mvn test -Dtest=ScientificCalculatorApplicationTest`
+运行：`mvn test -Dtest=ScientificCalculatorApplicationTest`
 
-Expected: Maven reports that no `pom.xml` exists.
+预期：Maven 报告不存在 `pom.xml`。
 
-- [ ] **Step 3: Add the minimal Maven/Spring Boot files**
+- [ ] **步骤 3：添加最小 Maven/Spring Boot 文件**
 
-Use Spring Boot `3.3.13`, `spring-boot-starter-web`, and `spring-boot-starter-test`; set `java.version` to `17`; configure `spring-boot-maven-plugin` without extra runtime dependencies. Add the standard Maven Wrapper pinned to Maven `3.9.9`. Do not add validation or utility dependencies because the small request contract is validated directly.
+使用 Spring Boot `3.3.13`、`spring-boot-starter-web` 和 `spring-boot-starter-test`；将 `java.version` 设置为 `17`；配置 `spring-boot-maven-plugin`，不增加额外运行时依赖。添加固定到 Maven `3.9.9` 的标准 Maven Wrapper。由于请求契约很小且可以直接校验，不添加校验或工具类依赖。
 
 ```java
 @SpringBootApplication
@@ -88,27 +88,27 @@ class HealthController {
 }
 ```
 
-- [ ] **Step 4: Run the context test**
+- [ ] **步骤 4：运行上下文测试**
 
-Run: `./mvnw test -Dtest=ScientificCalculatorApplicationTest`
+运行：`./mvnw test -Dtest=ScientificCalculatorApplicationTest`
 
-Expected: the test passes and Spring creates the application context.
+预期：测试通过，Spring 成功创建应用上下文。
 
-- [ ] **Step 5: Commit the bootstrap**
+- [ ] **步骤 5：提交初始化代码**
 
 ```bash
 git add pom.xml .mvn mvnw mvnw.cmd src/main src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java
 git commit -m "build: bootstrap spring boot calculator service"
 ```
 
-## Task 2: Implement the expression evaluator test-first
+## 任务 2：以测试驱动方式实现表达式求值器
 
-**Files:**
-- Create: `src/main/java/com/example/scientificcalculator/expression/ExpressionException.java`
-- Create: `src/main/java/com/example/scientificcalculator/expression/ExpressionEvaluator.java`
-- Test: `src/test/java/com/example/scientificcalculator/expression/ExpressionEvaluatorTest.java`
+**文件：**
+- 创建：`src/main/java/com/example/scientificcalculator/expression/ExpressionException.java`
+- 创建：`src/main/java/com/example/scientificcalculator/expression/ExpressionEvaluator.java`
+- 测试：`src/test/java/com/example/scientificcalculator/expression/ExpressionEvaluatorTest.java`
 
-- [ ] **Step 1: Write the first failing tests**
+- [ ] **步骤 1：编写首批失败测试**
 
 ```java
 class ExpressionEvaluatorTest {
@@ -129,31 +129,31 @@ class ExpressionEvaluatorTest {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail because evaluator types do not exist**
+- [ ] **步骤 2：运行测试并确认因求值器类型不存在而失败**
 
-Run: `./mvnw test -Dtest=ExpressionEvaluatorTest`
+运行：`./mvnw test -Dtest=ExpressionEvaluatorTest`
 
-Expected: compilation failure mentioning the missing evaluator and `AngleUnit`.
+预期：编译失败，提示缺少求值器和 `AngleUnit`。
 
-- [ ] **Step 3: Implement the tokenizer and parser minimally**
+- [ ] **步骤 3：以最小实现完成词法分析和解析**
 
-Create `AngleUnit` with exactly `RADIAN` and `DEGREE` values. 
+创建只包含 `RADIAN` 和 `DEGREE` 值的 `AngleUnit`。
 
-Implement a private cursor over the input with these methods: `parseAdditive`, `parseMultiplicative`, `parseUnary`, `parsePower`, and `parsePrimary`. `parsePower` must parse one optional `^` followed by `parseUnary` so powers are right associative and negative exponents work. Tokenize decimal/scientific numbers explicitly before calling `Double.parseDouble`; accept only ASCII operators, parentheses, commas only for rejection, and lowercase identifiers. Reject trailing input after the root expression.
+为输入实现私有游标，并提供以下方法：`parseAdditive`、`parseMultiplicative`、`parseUnary`、`parsePower` 和 `parsePrimary`。`parsePower` 必须解析一个可选的 `^`，后接 `parseUnary`，从而保证幂运算右结合并支持负指数。调用 `Double.parseDouble` 前，先显式解析十进制和科学计数法数字；只接受 ASCII 运算符、括号、仅用于拒绝的逗号，以及小写标识符。根表达式解析完成后，拒绝尾随输入。
 
-The public evaluator contract is exactly:
+公开求值器契约必须是：
 
 ```java
 public double evaluate(String expression, AngleUnit angleUnit)
 ```
 
-Count every number, identifier, operator, and parenthesis as one token; whitespace and EOF do not count. Reject the 501st token. Increment nesting depth for each parenthesized expression and function call, reject depth 101 before recursing, and always decrement in `finally`.
+每个数字、标识符、运算符和括号计为一个 Token；空白和 EOF 不计数。拒绝第 501 个 Token。每进入一个括号表达式或函数调用就增加嵌套深度，在递归前拒绝第 101 层，并始终在 `finally` 中递减。
 
-Use `ExpressionException` codes for `EXPRESSION_SYNTAX_ERROR`, `EXPRESSION_LIMIT_EXCEEDED`, `DIVISION_BY_ZERO`, `DOMAIN_ERROR`, and `NON_FINITE_RESULT`.
+使用 `ExpressionException` 错误码：`EXPRESSION_SYNTAX_ERROR`、`EXPRESSION_LIMIT_EXCEEDED`、`DIVISION_BY_ZERO`、`DOMAIN_ERROR` 和 `NON_FINITE_RESULT`。
 
-- [ ] **Step 4: Add the complete evaluator behavior tests**
+- [ ] **步骤 4：补齐求值器行为测试**
 
-Add this parameterized success matrix and assert exception error codes for failures:
+增加以下参数化成功矩阵，并对失败场景断言异常错误码：
 
 ```java
 @ParameterizedTest
@@ -181,29 +181,29 @@ void rejectsInvalidSyntax(String expression) {
 }
 ```
 
-Add individual tests for `1/0`, `1%0` (`DIVISION_BY_ZERO`), `sqrt(-1)`, `ln(0)` (`DOMAIN_ERROR`), `exp(1000)` (`NON_FINITE_RESULT`), expression length 1001, more than 500 tokens, and more than 100 nested parentheses (`EXPRESSION_LIMIT_EXCEEDED`).
+分别增加 `1/0`、`1%0`（`DIVISION_BY_ZERO`），`sqrt(-1)`、`ln(0)`（`DOMAIN_ERROR`），`exp(1000)`（`NON_FINITE_RESULT`），表达式长度 1001、超过 500 个 Token、超过 100 层嵌套括号（`EXPRESSION_LIMIT_EXCEEDED`）的测试。
 
-- [ ] **Step 5: Run the evaluator suite to verify green**
+- [ ] **步骤 5：运行求值器测试套件并确认通过**
 
-Run: `./mvnw test -Dtest=ExpressionEvaluatorTest`
+运行：`./mvnw test -Dtest=ExpressionEvaluatorTest`
 
-Expected: all evaluator tests pass with no warnings or errors.
+预期：所有求值器测试通过，无警告或错误。
 
-- [ ] **Step 6: Commit the evaluator**
+- [ ] **步骤 6：提交求值器**
 
 ```bash
 git add src/main/java/com/example/scientificcalculator/expression src/test/java/com/example/scientificcalculator/expression src/main/java/com/example/scientificcalculator/calculation/AngleUnit.java
 git commit -m "feat: add safe scientific expression evaluator"
 ```
 
-## Task 3: Add bounded in-memory history
+## 任务 3：增加有界内存历史
 
-**Files:**
-- Create: `src/main/java/com/example/scientificcalculator/calculation/CalculationRecord.java`
-- Create: `src/main/java/com/example/scientificcalculator/calculation/CalculationHistory.java`
-- Test: `src/test/java/com/example/scientificcalculator/calculation/CalculationHistoryTest.java`
+**文件：**
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/CalculationRecord.java`
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/CalculationHistory.java`
+- 测试：`src/test/java/com/example/scientificcalculator/calculation/CalculationHistoryTest.java`
 
-- [ ] **Step 1: Write failing history tests**
+- [ ] **步骤 1：编写失败的历史测试**
 
 ```java
 class CalculationHistoryTest {
@@ -251,17 +251,17 @@ class CalculationHistoryTest {
 }
 ```
 
-- [ ] **Step 2: Run the history tests and confirm they fail**
+- [ ] **步骤 2：运行历史测试并确认失败**
 
-Run: `./mvnw test -Dtest=CalculationHistoryTest`
+运行：`./mvnw test -Dtest=CalculationHistoryTest`
 
-Expected: compilation failure because record/store types are missing.
+预期：因记录/存储类型缺失而编译失败。
 
-- [ ] **Step 3: Implement the minimal thread-safe store**
+- [ ] **步骤 3：实现最小线程安全存储**
 
-Use a `long nextId`, an instance `capacity`, and a `Deque<CalculationRecord>` guarded by the same lock. Allocate `++nextId`, create the immutable record with `Instant.now()`, add it to the front, and evict from the tail while `size() > capacity` inside one synchronized section so ID order and insertion order cannot diverge. `list(limit)` returns a new immutable list; `find(id)` returns an `Optional`; `clear()` empties the deque without resetting the counter. Reject capacities below 1 in the constructor, and construct the production application bean with capacity 1000.
+使用 `long nextId`、实例字段 `capacity` 和由同一把锁保护的 `Deque<CalculationRecord>`。在一个同步区段内执行 `++nextId`、使用 `Instant.now()` 创建不可变记录、插入队首，并在 `size() > capacity` 时从队尾淘汰，确保 ID 顺序与插入顺序一致。`list(limit)` 返回新的不可变列表；`find(id)` 返回 `Optional`；`clear()` 清空队列但不重置计数器。构造函数拒绝小于 1 的容量，生产应用 Bean 使用容量 1000。
 
-The store contracts are exactly:
+存储契约必须是：
 
 ```java
 public CalculationRecord add(String expression, AngleUnit angleUnit, double result)
@@ -270,38 +270,38 @@ public Optional<CalculationRecord> find(long id)
 public void clear()
 ```
 
-- [ ] **Step 4: Add ordering, limit, find, clear, snapshot, and concurrency assertions**
+- [ ] **步骤 4：增加顺序、限制、查询、清空、快照和并发断言**
 
-Verify missing IDs return empty, clear leaves the next ID greater than all previous IDs, and the returned list rejects mutation without changing the store. HTTP `limit` validation belongs only to Task 4.
+验证不存在的 ID 返回空值；清空后下一个 ID 仍大于所有历史 ID；返回列表拒绝修改且不改变存储。HTTP `limit` 校验仅在任务 4 中完成。
 
-- [ ] **Step 5: Run the history suite**
+- [ ] **步骤 5：运行历史测试套件**
 
-Run: `./mvnw test -Dtest=CalculationHistoryTest`
+运行：`./mvnw test -Dtest=CalculationHistoryTest`
 
-Expected: all history tests pass.
+预期：所有历史测试通过。
 
-- [ ] **Step 6: Commit the history store**
+- [ ] **步骤 6：提交历史存储**
 
 ```bash
 git add src/main/java/com/example/scientificcalculator/calculation src/test/java/com/example/scientificcalculator/calculation/CalculationHistoryTest.java
 git commit -m "feat: add bounded in-memory calculation history"
 ```
 
-## Task 4: Wire service, DTOs, controller, and error responses
+## 任务 4：接入服务、DTO、控制器和错误响应
 
-**Files:**
-- Create: `src/main/java/com/example/scientificcalculator/calculation/CalculationRequest.java`
-- Create: `src/main/java/com/example/scientificcalculator/calculation/CalculatorService.java`
-- Create: `src/main/java/com/example/scientificcalculator/calculation/HistoryNotFoundException.java`
-- Create: `src/main/java/com/example/scientificcalculator/calculation/CalculationController.java`
-- Create: `src/main/java/com/example/scientificcalculator/api/ApiExceptionHandler.java`
-- Modify: `src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java` to expose `CalculationHistory(1000)` and `ExpressionEvaluator` as explicit Spring beans.
-- Test: `src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java`
-- Test: `src/test/java/com/example/scientificcalculator/calculation/CalculatorServiceTest.java`
+**文件：**
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/CalculationRequest.java`
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/CalculatorService.java`
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/HistoryNotFoundException.java`
+- 创建：`src/main/java/com/example/scientificcalculator/calculation/CalculationController.java`
+- 创建：`src/main/java/com/example/scientificcalculator/api/ApiExceptionHandler.java`
+- 修改：`src/main/java/com/example/scientificcalculator/ScientificCalculatorApplication.java`，显式暴露 `CalculationHistory(1000)` 和 `ExpressionEvaluator` Spring Bean。
+- 测试：`src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java`
+- 测试：`src/test/java/com/example/scientificcalculator/calculation/CalculatorServiceTest.java`
 
-- [ ] **Step 1: Write failing MockMvc contract tests**
+- [ ] **步骤 1：编写失败的 MockMvc 契约测试**
 
-First write a focused service failure-atomicity test:
+先编写聚焦于服务失败原子性的测试：
 
 ```java
 @Test
@@ -315,7 +315,7 @@ void failedEvaluationDoesNotWriteHistory() {
 }
 ```
 
-Then write the HTTP contract test:
+再编写 HTTP 契约测试：
 
 ```java
 class CalculationControllerTest {
@@ -343,17 +343,17 @@ class CalculationControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run the web test and confirm it fails**
+- [ ] **步骤 2：运行 Web 测试并确认失败**
 
-Run: `./mvnw test -Dtest=CalculationControllerTest`
+运行：`./mvnw test -Dtest=CalculationControllerTest`
 
-Expected: compilation or request-routing failure because controller/service/DTOs do not exist.
+预期：因控制器、服务或 DTO 不存在而编译失败或路由失败。
 
-- [ ] **Step 3: Implement request/result flow**
+- [ ] **步骤 3：实现请求到结果的流程**
 
-Make `CalculationRequest` a record with `String expression` and nullable `String angleUnit`. Normalize a missing or blank unit to `RADIAN`; parse other values with `AngleUnit.valueOf` and map invalid values to `400 INVALID_ARGUMENT`. Validate nonblank expression and max length 1000 at the HTTP boundary. Validate history `limit` only in the controller as 1–100; the store remains an internal component receiving already-valid values. `CalculatorService.calculate` evaluates first and adds history only after success. Return `200 OK` for calculation, list, single-record, health, and clear-history; clear returns `{"cleared":true}`.
+将 `CalculationRequest` 定义为包含 `String expression` 和可空 `String angleUnit` 的 record。缺失或空白单位规范化为 `RADIAN`；其他值使用 `AngleUnit.valueOf` 解析，非法值映射为 `400 INVALID_ARGUMENT`。在 HTTP 边界校验表达式非空且长度不超过 1000。仅在控制器中校验历史 `limit` 为 1–100；存储作为内部组件，只接收已校验值。`CalculatorService.calculate` 先求值，成功后才写入历史。计算、列表、单条记录、健康检查和清空历史均返回 `200 OK`；清空返回 `{"cleared":true}`。
 
-Use these exact service contracts:
+服务契约必须是：
 
 ```java
 public CalculationRecord calculate(String expression, AngleUnit angleUnit)
@@ -362,9 +362,9 @@ public CalculationRecord history(long id)
 public void clearHistory()
 ```
 
-`history(long)` throws `HistoryNotFoundException(id)` when no record exists.
+记录不存在时，`history(long)` 抛出 `HistoryNotFoundException(id)`。
 
-Add these beans after the evaluator and history classes exist:
+求值器和历史类创建后，添加以下 Bean：
 
 ```java
 @Bean
@@ -378,62 +378,62 @@ CalculationHistory calculationHistory() {
 }
 ```
 
-- [ ] **Step 4: Implement the global error mapper**
+- [ ] **步骤 4：实现全局错误映射器**
 
-Map evaluator/domain errors to their documented status/code pairs and history misses to `404 HISTORY_NOT_FOUND`. Add explicit handlers for `MethodArgumentTypeMismatchException` (`400 INVALID_ARGUMENT`), `HttpMessageNotReadableException` (`400 INVALID_ARGUMENT`), and `HttpMediaTypeNotSupportedException` (`415 UNSUPPORTED_MEDIA_TYPE`). Add a final `Exception` handler returning `500 INTERNAL_ERROR` without exception class names or stack traces. Every error includes `code`, `message`, `path`, and `timestamp`.
+将求值器/领域错误映射到文档规定的状态码和错误码；历史记录缺失映射为 `404 HISTORY_NOT_FOUND`。显式处理 `MethodArgumentTypeMismatchException`（`400 INVALID_ARGUMENT`）、`HttpMessageNotReadableException`（`400 INVALID_ARGUMENT`）和 `HttpMediaTypeNotSupportedException`（`415 UNSUPPORTED_MEDIA_TYPE`）。最后增加 `Exception` 兜底处理，返回 `500 INTERNAL_ERROR`，不包含异常类名或堆栈。每个错误都包含 `code`、`message`、`path` 和 `timestamp`。
 
-- [ ] **Step 5: Expand MockMvc tests**
+- [ ] **步骤 5：扩展 MockMvc 测试**
 
-Cover DEGREE calculation, history ordering and limit, single-record success/404, clear response and empty follow-up list, blank expression (`INVALID_ARGUMENT`), malformed JSON, invalid angle unit, nonnumeric/invalid `limit`, evaluator `422` errors, invalid media type, generic `500` without stack details, stable error shape, and failed calculations not appearing in history.
+覆盖 DEGREE 计算、历史顺序和 limit、单条记录成功/404、清空响应及后续空列表、空白表达式（`INVALID_ARGUMENT`）、格式错误的 JSON、非法角度单位、非数字/非法 `limit`、求值器 `422` 错误、非法媒体类型、无堆栈详情的通用 `500`、稳定错误结构，以及失败计算不出现在历史中。
 
-- [ ] **Step 6: Run the controller suite**
+- [ ] **步骤 6：运行控制器测试套件**
 
-Run: `./mvnw test -Dtest=CalculationControllerTest`
+运行：`./mvnw test -Dtest=CalculationControllerTest`
 
-Expected: all HTTP contract tests pass.
+预期：所有 HTTP 契约测试通过。
 
-- [ ] **Step 7: Commit the HTTP layer**
+- [ ] **步骤 7：提交 HTTP 层**
 
 ```bash
 git add src/main/java/com/example/scientificcalculator/calculation src/main/java/com/example/scientificcalculator/api src/test/java/com/example/scientificcalculator/calculation/CalculationControllerTest.java
 git commit -m "feat: expose calculator and history HTTP APIs"
 ```
 
-## Task 5: Documentation and runnable-jar verification
+## 任务 5：文档和可执行 JAR 验证
 
-**Files:**
-- Create: `README.md`
-- Create: `docs/AI_DELIVERY.md`
-- Create: `docs/TEST_EVIDENCE.md`
-- Modify: `src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java` to call `CalculatorService` through the real Spring context and assert one calculation is stored.
+**文件：**
+- 创建：`README.md`
+- 创建：`docs/AI_DELIVERY.md`
+- 创建：`docs/TEST_EVIDENCE.md`
+- 修改：`src/test/java/com/example/scientificcalculator/ScientificCalculatorApplicationTest.java`，通过真实 Spring 上下文调用 `CalculatorService` 并断言保存了一次计算。
 
-- [ ] **Step 1: Add documentation from the frozen requirements**
+- [ ] **步骤 1：根据已冻结需求补充文档**
 
-`README.md` must document Java 17 prerequisites, `./mvnw clean verify`, `java -jar`, all endpoints, request/response examples, grammar, function whitelist, angle units, error codes, memory-only restart behavior, and the fixed 1000-record capacity.
+`README.md` 必须说明 Java 17 前置条件、`./mvnw clean verify`、`java -jar`、所有接口、请求/响应示例、语法、函数白名单、角度单位、错误码、仅内存且重启丢失的行为，以及固定 1000 条容量。
 
-`docs/AI_DELIVERY.md` must contain a table with the actual prompts used in this session, AI output summary, personal verification, personal corrections, and evidence paths/commands for requirements, design, coding, testing, and packaging.
+`docs/AI_DELIVERY.md` 必须包含表格，记录本次会话实际使用的提示词、AI 输出摘要、个人验证、个人修正，以及需求、设计、编码、测试和打包阶段的证据路径/命令。
 
-`docs/TEST_EVIDENCE.md` must record the real Java/Maven versions, test summary, JAR path, SHA-256, startup output, and curl responses after the verification commands run; do not invent results before execution.
+`docs/TEST_EVIDENCE.md` 必须记录真实 Java/Maven 版本、测试摘要、JAR 路径、SHA-256、启动输出，以及执行验证命令后的 curl 响应；命令执行前不得虚构结果。
 
-- [ ] **Step 2: Upgrade the context test to a real application integration test**
+- [ ] **步骤 2：将上下文测试升级为真实应用集成测试**
 
-Annotate `ScientificCalculatorApplicationTest` with `@SpringBootTest` and `@AutoConfigureMockMvc`. POST `{"expression":"1+2"}` to the real application context, assert `200` and result `3.0`, then GET history and assert the record is present. This proves Spring bean wiring and the controller→service→evaluator→history path.
+为 `ScientificCalculatorApplicationTest` 添加 `@SpringBootTest` 和 `@AutoConfigureMockMvc`。向真实应用上下文 POST `{"expression":"1+2"}`，断言返回 `200` 且结果为 `3.0`，随后 GET 历史并断言记录存在，从而验证 Spring Bean wiring 以及 controller→service→evaluator→history 路径。
 
-- [ ] **Step 3: Run the complete verification command**
+- [ ] **步骤 3：运行完整验证命令**
 
-Run: `./mvnw clean verify`
+运行：`./mvnw clean verify`
 
-Expected: exit code 0, all tests pass, and `target/scientific-calculator-*.jar` exists.
+预期：退出码为 0，所有测试通过，并生成 `target/scientific-calculator-*.jar`。
 
-- [ ] **Step 4: Verify the JAR independently**
+- [ ] **步骤 4：独立验证 JAR**
 
-Run the JAR in a separate process:
+在独立进程中运行 JAR：
 
 ```bash
 java -jar target/scientific-calculator-*.jar
 ```
 
-From another shell, run:
+在另一终端运行：
 
 ```bash
 curl -i http://localhost:8080/health
@@ -443,26 +443,26 @@ curl -i -X POST http://localhost:8080/api/v1/calculations -H 'Content-Type: appl
 curl -i -X DELETE http://localhost:8080/api/v1/calculations
 ```
 
-Expected: health/calculation/list/clear return `200`; calculation result is `5.0`; division by zero returns `422`; clear returns `{"cleared":true}`.
+预期：健康检查、计算、列表和清空均返回 `200`；计算结果为 `5.0`；除零返回 `422`；清空返回 `{"cleared":true}`。
 
-- [ ] **Step 5: Record evidence and checksum**
+- [ ] **步骤 5：记录证据和校验和**
 
-Run `shasum -a 256 target/scientific-calculator-*.jar` and copy the actual output, test summary, and HTTP responses into `docs/TEST_EVIDENCE.md`. Do not claim a result until the command output has been checked.
+运行 `shasum -a 256 target/scientific-calculator-*.jar`，将真实输出、测试摘要和 HTTP 响应复制到 `docs/TEST_EVIDENCE.md`。检查命令输出前不得宣称结果。
 
-- [ ] **Step 6: Commit documentation and evidence**
+- [ ] **步骤 6：提交文档和证据**
 
 ```bash
 git add README.md docs/AI_DELIVERY.md docs/TEST_EVIDENCE.md src/test
 git commit -m "docs: add delivery and verification evidence"
 ```
 
-## Self-review checklist
+## 自查清单
 
-- [ ] Every frozen requirement has an implementation or verification task.
-- [ ] No task introduces a database, cache, external call, script engine, or dynamic execution path.
-- [ ] All successful HTTP endpoints use `200 OK`; clear-history returns `{"cleared":true}`.
-- [ ] Exactly eight single-argument functions are implemented.
-- [ ] History capacity is fixed at 1000 and IDs remain monotonic across clear.
-- [ ] Parser tests protect right-associative power and unary-sign semantics.
-- [ ] Error codes and status mappings match `REQUIREMENTS.md` and the design spec.
-- [ ] The final claim is based on fresh `./mvnw clean verify`, JAR startup, curl, and checksum evidence.
+- [ ] 每条已冻结需求都有对应的实现或验证任务。
+- [ ] 没有引入数据库、缓存、外部调用、脚本引擎或动态执行路径。
+- [ ] 所有成功 HTTP 接口使用 `200 OK`；清空历史返回 `{"cleared":true}`。
+- [ ] 确切实现 8 个单参数函数。
+- [ ] 历史容量固定为 1000，清空后 ID 仍保持单调递增。
+- [ ] 解析器测试保护幂运算右结合和一元符号语义。
+- [ ] 错误码及状态映射与 `REQUIREMENTS.md` 和设计规格一致。
+- [ ] 最终结论基于最新的 `./mvnw clean verify`、JAR 启动、curl 和校验和证据。
