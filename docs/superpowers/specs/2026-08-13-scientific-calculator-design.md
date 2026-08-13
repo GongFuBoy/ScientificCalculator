@@ -135,25 +135,133 @@ primary        := NUMBER
 
 ## 7. 测试与验收
 
-JUnit 5 单元测试覆盖：
+### 7.1 测试策略
 
-- 运算优先级、括号、科学计数法；
-- 幂的右结合、一元负号；
-- 常量、科学函数、RADIAN/DEGREE；
-- 非法字符、未知标识符、尾随输入；
-- 除零、定义域、溢出、长度和深度限制；
-- 历史倒序、容量、查询、清空和并发 ID 唯一性。
+测试按“纯 Java 单元测试 → Spring MVC 契约测试 → 可执行 JAR 冒烟测试”分层，优先在最小范围内定位失败：
 
-Spring MVC 契约测试覆盖成功计算、错误响应和历史接口。最终执行：
+| 层级 | 测试对象 | 工具 | 目标 |
+|---|---|---|---|
+| 单元测试 | 表达式解析、数值计算、内存历史 | JUnit 5 | 覆盖核心算法、边界和并发不变量，不启动 Spring |
+| Web 契约测试 | Controller、参数绑定、状态码、JSON | MockMvc | 验证公开 HTTP 契约和统一错误格式 |
+| 应用集成测试 | Spring 上下文与核心 Bean 协作 | `@SpringBootTest` | 确认应用可装配，真实调用链可工作 |
+| 产物验收 | runnable JAR | Maven、`java -jar`、`curl` | 确认脱离 IDE 后可独立启动和提供服务 |
+
+不引入 Testcontainers、数据库、外部服务模拟器或额外压测框架，因为系统没有对应依赖边界；并发正确性使用 JDK `ExecutorService` 完成可重复验证。
+
+### 7.2 表达式计算测试矩阵
+
+所有浮点结果使用容差断言，不直接比较字符串表现形式。
+
+| 类别 | 输入示例 | 预期结果/行为 |
+|---|---|---|
+| 四则与优先级 | `1 + 2 * 3` | `7` |
+| 括号 | `(1 + 2) * 3` | `9` |
+| 小数与科学计数法 | `.5 + 1.5e2` | `150.5` |
+| 幂右结合 | `2^3^2` | `512` |
+| 一元负号优先级 | `-2^2` | `-4` |
+| 负指数 | `2^-2` | `0.25` |
+| 常量与组合函数 | `sqrt(16) + ln(e)` | `5` |
+| 弧度制 | `sin(pi / 2)`，`RADIAN` | `1` |
+| 角度制 | `sin(90)`，`DEGREE` | `1` |
+| 绝对值与常用对数 | `abs(-3) + log(100)` | `5` |
+| 空白输入 | `"   "` | `400 INVALID_EXPRESSION` |
+| 不完整表达式 | `1 +` | `400 EXPRESSION_SYNTAX_ERROR` |
+| 非法字符 | `1; system()` | `400 EXPRESSION_SYNTAX_ERROR` |
+| 未知标识符/函数 | `foo(1)`、`x + 1` | `400 EXPRESSION_SYNTAX_ERROR` |
+| 隐式乘法 | `2pi`、`2(3+4)` | `400 EXPRESSION_SYNTAX_ERROR` |
+| 除零/模零 | `1/0`、`1%0` | `422 DIVISION_BY_ZERO` |
+| 函数定义域 | `sqrt(-1)`、`ln(0)` | `422 DOMAIN_ERROR` |
+| 数值溢出 | `exp(1000)` | `422 NON_FINITE_RESULT` |
+| 尾随输入 | `1 + 2 abc` | `400 EXPRESSION_SYNTAX_ERROR` |
+| 资源限制 | 超长表达式、Token 超限、嵌套超限 | `400 EXPRESSION_LIMIT_EXCEEDED` |
+
+额外断言所有失败计算均不写入历史，避免出现“请求失败但留下记录”的部分成功状态。
+
+### 7.3 内存历史与并发测试
+
+历史测试验证以下不变量：
+
+- 新记录按创建顺序倒序返回；
+- `limit` 精确限制结果数，且只能取 1～100；
+- 达到容量后只淘汰最旧记录，历史大小永不超过配置容量；
+- 按 ID 查询存在记录成功，不存在记录返回 `404 HISTORY_NOT_FOUND`；
+- 清空后查询为空，但新记录 ID 不与已清空记录重复；
+- 多线程同时写入时无异常、无丢失的已接受请求、ID 全部唯一，最终容量仍受上限约束；
+- 查询返回快照，调用方不能修改内部历史状态。
+
+并发测试使用固定线程池、统一开始信号和有超时的完成等待，不使用 `sleep` 猜测执行时序，避免产生偶发失败的测试。
+
+### 7.4 HTTP 契约测试
+
+MockMvc 至少验证：
+
+| 场景 | 关键断言 |
+|---|---|
+| 成功计算 | `201`、`Content-Type: application/json`、返回 ID/表达式/角度单位/结果/时间，随后可从历史查到 |
+| 省略角度单位 | 使用 `RADIAN` 默认值 |
+| 非法枚举或空表达式 | `400`，错误体包含稳定的 `code/message/path/timestamp` |
+| 计算领域错误 | `422`，不暴露异常类名或堆栈 |
+| 历史列表 | `200`、倒序、`limit` 生效 |
+| 单条历史 | 存在时 `200`，不存在时 `404` |
+| 清空历史 | `204`，响应体为空，后续列表为空 |
+| 健康检查 | `200` 与 `{"status":"UP"}` |
+| 非法 JSON/错误 Content-Type | 返回 JSON 格式的 `400`/`415`，不返回默认 HTML 错误页 |
+
+### 7.5 构建与独立运行验收
+
+构建环境必须实际使用 Java 17。执行：
 
 ```bash
+java -version
+mvn -version
 mvn clean verify
+```
+
+通过标准：
+
+- Maven 进程使用 Java 17；
+- 编译、单元测试、契约测试和集成测试全部成功；
+- `target/` 生成由 Spring Boot Maven Plugin 重打包的可执行 JAR；
+- 测试报告中失败数和错误数均为 0。
+
+随后在独立进程启动产物：
+
+```bash
 java -jar target/scientific-calculator-*.jar
-curl http://localhost:8080/health
-curl -X POST http://localhost:8080/api/v1/calculations \
+```
+
+另一个终端执行冒烟验收：
+
+```bash
+curl -i http://localhost:8080/health
+
+curl -i -X POST http://localhost:8080/api/v1/calculations \
   -H 'Content-Type: application/json' \
   -d '{"expression":"sin(90)+sqrt(16)","angleUnit":"DEGREE"}'
+
+curl -i 'http://localhost:8080/api/v1/calculations?limit=10'
+
+curl -i -X POST http://localhost:8080/api/v1/calculations \
+  -H 'Content-Type: application/json' \
+  -d '{"expression":"1/0"}'
+
+curl -i -X DELETE http://localhost:8080/api/v1/calculations
 ```
+
+通过标准：健康检查为 `200`；成功计算为 `201` 且结果为 `5.0`；历史查询包含该记录；除零为 `422` 且错误体符合契约；清空为 `204`。进程启动期间不要求数据库、缓存、环境变量密钥或网络连接。
+
+### 7.6 验收证据与退出标准
+
+交付时保留以下可复核证据：
+
+- `mvn clean verify` 的完整结果摘要和 Surefire 测试报告；
+- runnable JAR 文件名、大小和 SHA-256；
+- 独立启动日志中的端口与启动成功信息；
+- 上述 HTTP 冒烟请求的状态码和响应体；
+- 需求—源码—测试用例追踪表；
+- 已知约束：`double` 精度、历史重启丢失、单实例内存范围。
+
+只有在全部自动化测试通过、JAR 可独立启动、HTTP 冒烟用例通过且交付文档中的证据可复现时，才视为验收通过。
 
 ## 8. AI 全链路交付证据
 
